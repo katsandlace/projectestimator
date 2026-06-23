@@ -1,4 +1,5 @@
-Created using Cursor, June 2026
+Created using Cursor, June 2026.
+Sample data is not a reflection of anything other than the need for interesting variation within datasets when trying out the tool. 
 
 # Project Configuration Planner
 
