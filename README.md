@@ -1,3 +1,5 @@
+Created using Cursor, June 2026
+
 # Project Configuration Planner
 
 Open `index.html` directly, or use the local URL below while the included test server is running:
