@@ -30,9 +30,9 @@
     }
 
     main {
-      max-width: 1320px;
+      max-width: 1800px;
       margin: 0 auto;
-      padding: 28px;
+      padding: 28px 32px;
     }
 
     header {
@@ -90,7 +90,7 @@
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(320px, 420px) 1fr;
+      grid-template-columns: 340px minmax(0, 1fr);
       gap: 18px;
       align-items: start;
     }
@@ -228,7 +228,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 900px;
+      min-width: 1050px;
     }
 
     th, td {
@@ -252,6 +252,16 @@
     td.num, th.num {
       text-align: right;
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    th:nth-child(3), td:nth-child(3) {
+      min-width: 230px;
+    }
+
+    th:nth-child(8), td:nth-child(8) {
+      min-width: 220px;
+      width: 22%;
     }
 
     .pill {
@@ -266,6 +276,10 @@
       font-size: 0.78rem;
       margin-right: 5px;
       margin-bottom: 4px;
+      max-width: 100%;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      line-height: 1.25;
     }
 
     .pill.warn {
@@ -281,6 +295,29 @@
     .small {
       color: var(--muted);
       font-size: 0.82rem;
+    }
+
+    .check-field {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 38px;
+      padding-top: 22px;
+    }
+
+    .check-field input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    .check-field label {
+      margin: 0;
+    }
+
+    .scenario-summary {
+      padding: 0 16px 14px;
     }
 
     .timeline {
@@ -318,9 +355,13 @@
       border-top: 1px solid var(--line);
     }
 
+    @media (max-width: 1450px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
     @media (max-width: 980px) {
       main { padding: 18px; }
-      header, .layout, .status { grid-template-columns: 1fr; }
+      header, .status { grid-template-columns: 1fr; }
       .actions { justify-content: flex-start; }
     }
 
@@ -379,6 +420,22 @@
               <label for="goliveWeeks">Go-live weeks</label>
               <input id="goliveWeeks" type="number" min="0" value="1" step="0.5">
             </div>
+            <div class="field">
+              <label for="maxBudget">Max budget</label>
+              <input id="maxBudget" type="number" min="0" value="0" step="10000" title="Use 0 for no budget limit">
+            </div>
+            <div class="field">
+              <label for="maxProjectWeeks">Max project weeks</label>
+              <input id="maxProjectWeeks" type="number" min="0" value="0" step="0.5" title="Use 0 for no duration limit">
+            </div>
+            <div class="field">
+              <label for="maxScenarios">Max output scenarios</label>
+              <input id="maxScenarios" type="number" min="1" max="500" value="20" step="1">
+            </div>
+            <div class="check-field">
+              <input id="noIdleTime" type="checkbox">
+              <label for="noIdleTime" title="Excludes scenarios with less than 68% build utilization">Do not allow idle time</label>
+            </div>
           </div>
 
           <div class="field">
@@ -408,6 +465,7 @@
           <div class="panel-body">
             <div class="status" id="metrics"></div>
           </div>
+          <div class="scenario-summary small" id="scenarioSummary"></div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -437,7 +495,7 @@
 
         <div id="roles" class="tab-pane">
           <div class="panel-body field">
-            <label for="rolesCsv">Roles: role,role_family,staffing,count,min_count,max_count,weekly_cost,build_contribution_pct,skills,inherits</label>
+            <label for="rolesCsv">Roles: role,role_family,staffing,count,min_count,max_count,daily_rate,build_contribution_pct,skills,inherits</label>
             <textarea id="rolesCsv"></textarea>
           </div>
         </div>
@@ -469,13 +527,13 @@ INT-E2E,End-to-end integration,10,integration,"INT-TOOL;MKT-TOOL;CFG-CORE;DATA-M
 TEST-PREP,Test preparation,8,testing,"CFG-CORE;INT-API;DATA-MIG"
 FIXES,Defect fixes and hardening,10,"testing;configuration","INT-E2E;TEST-PREP;SEC-ROLES;CFG-WORKFLOW;CFG-PORTAL;INT-BATCH;REPORTING"`;
 
-    const sampleRoles = `role,role_family,staffing,count,min_count,max_count,weekly_cost,build_contribution_pct,skills,inherits
-Project Manager,leadership,fixed,1,,,4200,0,,
-Technical Lead,leadership,fixed,1,,,6500,25,"configuration;integration;security",
-General Developer,developer,variable,,1,3,5200,100,"configuration;data;testing",
-Integration Developer,developer,variable,,0,2,6500,100,"integration;integration_tool",General Developer
-General Consultant,consultant,variable,,0,1,5600,100,"configuration;data;testing",
-Marketing Tool Consultant,consultant,variable,,0,1,6800,100,"marketing_tool",General Consultant`;
+    const sampleRoles = `role,role_family,staffing,count,min_count,max_count,daily_rate,build_contribution_pct,skills,inherits
+Project Manager,leadership,fixed,1,,,840,0,,
+Technical Lead,leadership,fixed,1,,,1300,25,"configuration;integration;security",
+General Developer,developer,variable,,1,3,1040,100,"configuration;data;testing",
+Integration Developer,developer,variable,,0,2,1300,100,"integration;integration_tool",General Developer
+General Consultant,consultant,variable,,0,1,1120,100,"configuration;data;testing",
+Marketing Tool Consultant,consultant,variable,,0,1,1360,100,"marketing_tool",General Consultant`;
 
     const sampleMeetings = `meeting,phase,frequency,duration_hours,attendees
 Daily stand-up,build,daily,0.25,All
@@ -490,7 +548,8 @@ Go-live checkpoint,go-live,daily,0.75,All`;
       scenarios: [],
       tasks: [],
       roles: [],
-      meetings: []
+      meetings: [],
+      selectionMessage: ""
     };
 
     const el = (id) => document.getElementById(id);
@@ -591,6 +650,8 @@ Go-live checkpoint,go-live,daily,0.75,All`;
         const fixedCount = Math.max(0, Math.floor(parseNumber(row.count || row.fte, 1)));
         const minCount = staffing === "variable" ? Math.max(0, Math.floor(parseNumber(row.min_count, 0))) : fixedCount;
         const maxCount = staffing === "variable" ? Math.max(minCount, Math.floor(parseNumber(row.max_count, minCount))) : fixedCount;
+        const dailyRate = parseNumber(row.daily_rate || row.day_rate || row.cost_per_day, 0);
+        const legacyWeeklyCost = parseNumber(row.weekly_cost || row.weekly_rate || row.cost_per_week, 0);
         return {
           role: row.role || row.name || "Role",
           family: String(row.role_family || row.family || row.category || "").trim().toLowerCase(),
@@ -598,7 +659,8 @@ Go-live checkpoint,go-live,daily,0.75,All`;
           count: fixedCount,
           minCount,
           maxCount,
-          weeklyCost: parseNumber(row.weekly_cost || row.weekly_rate || row.cost_per_week, 0),
+          dailyRate: dailyRate || legacyWeeklyCost / 5,
+          weeklyCost: dailyRate ? dailyRate * 5 : legacyWeeklyCost,
           buildContributionPct: Math.max(0, parseNumber(row.build_contribution_pct || row.build_capacity_pct || row.delivery_pct, 0)),
           ownSkills: splitList(row.skills || row.skillset || row.skillsets),
           inherits: String(row.inherits || row.inherits_from || "").trim()
@@ -813,12 +875,70 @@ Go-live checkpoint,go-live,daily,0.75,All`;
       return roles.filter((role) => role.count > 0).map((role) => `${role.count} ${role.role}`).join("; ");
     }
 
+    function dominates(a, b) {
+      return a.totalCost <= b.totalCost && a.totalWeeks <= b.totalWeeks &&
+        (a.totalCost < b.totalCost || a.totalWeeks < b.totalWeeks);
+    }
+
+    function paretoFronts(scenarios) {
+      const remaining = [...scenarios];
+      const fronts = [];
+      while (remaining.length) {
+        const front = remaining.filter((candidate) =>
+          !remaining.some((other) => other !== candidate && dominates(other, candidate))
+        );
+        fronts.push(front);
+        front.forEach((item) => remaining.splice(remaining.indexOf(item), 1));
+      }
+      return fronts;
+    }
+
+    function diverseSelection(front, count) {
+      if (count >= front.length) return front;
+      const costs = front.map((item) => item.totalCost);
+      const weeks = front.map((item) => item.totalWeeks);
+      const minCost = Math.min(...costs);
+      const maxCost = Math.max(...costs);
+      const minWeeks = Math.min(...weeks);
+      const maxWeeks = Math.max(...weeks);
+      const normalized = (value, min, max) => max === min ? 0 : (value - min) / (max - min);
+
+      if (count === 1) {
+        return [[...front].sort((a, b) =>
+          (normalized(a.totalCost, minCost, maxCost) + normalized(a.totalWeeks, minWeeks, maxWeeks)) -
+          (normalized(b.totalCost, minCost, maxCost) + normalized(b.totalWeeks, minWeeks, maxWeeks))
+        )[0]];
+      }
+
+      const scored = front.map((item) => ({ item, distance: 0 }));
+      [["totalCost", minCost, maxCost], ["totalWeeks", minWeeks, maxWeeks]].forEach(([key, min, max]) => {
+        const ordered = [...scored].sort((a, b) => a.item[key] - b.item[key]);
+        ordered[0].distance = Infinity;
+        ordered[ordered.length - 1].distance = Infinity;
+        if (max === min) return;
+        for (let i = 1; i < ordered.length - 1; i += 1) {
+          ordered[i].distance += (ordered[i + 1].item[key] - ordered[i - 1].item[key]) / (max - min);
+        }
+      });
+      return scored.sort((a, b) => b.distance - a.distance).slice(0, count).map((entry) => entry.item);
+    }
+
+    function selectOptimalScenarios(scenarios, maxCount) {
+      const selected = [];
+      for (const front of paretoFronts(scenarios)) {
+        const remaining = maxCount - selected.length;
+        if (remaining <= 0) break;
+        selected.push(...diverseSelection(front, remaining));
+      }
+      return selected;
+    }
+
     function runScenarios() {
       const { tasks, roles, meetings } = loadInputs();
       const fixedWeeks = parseNumber(el("discoveryWeeks").value) + parseNumber(el("sitWeeks").value) + parseNumber(el("uatWeeks").value) + parseNumber(el("goliveWeeks").value);
       const criticalWeeks = criticalPathWeeks(tasks);
       const topSkill = topSkillPressure(tasks);
-      const scenarios = [];
+      const generated = [];
 
       roleConfigurations(roles).forEach((scenarioRoles) => {
         const scheduled = scheduleBuild(tasks, scenarioRoles, meetings);
@@ -828,8 +948,8 @@ Go-live checkpoint,go-live,daily,0.75,All`;
         const missingSkills = [...new Set(scheduled.unscheduled
           .filter((task) => !scheduled.resources.some((resource) => canDo(resource, task)))
           .flatMap((task) => task.skills))];
-        scenarios.push({
-          label: scenarioLabel(scenarios.length),
+        generated.push({
+          label: scenarioLabel(generated.length),
           teamSize: scenarioRoles.reduce((total, role) => total + role.count, 0),
           mix: staffingMix(scenarioRoles),
           buildWeeks,
@@ -842,6 +962,30 @@ Go-live checkpoint,go-live,daily,0.75,All`;
           topSkill
         });
       });
+
+      const maxBudget = parseNumber(el("maxBudget").value, 0);
+      const maxProjectWeeks = parseNumber(el("maxProjectWeeks").value, 0);
+      const maxScenarios = Math.max(1, Math.min(500, Math.floor(parseNumber(el("maxScenarios").value, 20))));
+      const noIdleTime = el("noIdleTime").checked;
+      const withinLimits = generated.filter((scenario) =>
+        (!maxBudget || scenario.totalCost <= maxBudget) &&
+        (!maxProjectWeeks || scenario.totalWeeks <= maxProjectWeeks) &&
+        (!noIdleTime || scenario.utilization >= 0.68)
+      );
+      const feasible = withinLimits.filter((scenario) => !scenario.unscheduled.length);
+      let scenarios = selectOptimalScenarios(feasible, maxScenarios);
+
+      if (scenarios.length) {
+        state.selectionMessage = `${scenarios.length} optimal scenario${scenarios.length === 1 ? "" : "s"} shown from ${generated.length} generated; ${feasible.length} met all constraints.`;
+      } else {
+        scenarios = withinLimits
+          .filter((scenario) => scenario.unscheduled.length)
+          .sort((a, b) => a.unscheduled.length - b.unscheduled.length || a.totalCost - b.totalCost)
+          .slice(0, maxScenarios);
+        state.selectionMessage = scenarios.length
+          ? `No feasible scenarios met all constraints. Showing ${scenarios.length} closest staffing mixes for diagnosis.`
+          : `No scenarios met the current budget, duration, and idle-time constraints.`;
+      }
 
       scenarios.sort((a, b) => a.teamSize - b.teamSize || a.totalCost - b.totalCost || a.totalWeeks - b.totalWeeks);
       scenarios.forEach((scenario, index) => { scenario.label = scenarioLabel(index); });
@@ -865,6 +1009,7 @@ Go-live checkpoint,go-live,daily,0.75,All`;
 
     function renderResults(scenarios, criticalWeeks) {
       renderMetrics(scenarios);
+      el("scenarioSummary").textContent = state.selectionMessage || "";
       let previous = null;
       el("scenarioBody").innerHTML = scenarios.map((scenario) => {
         const notes = scenarioNotes(scenario, previous, criticalWeeks);
@@ -948,9 +1093,11 @@ Go-live checkpoint,go-live,daily,0.75,All`;
       download("project-scenarios.csv", toCsv(state.scenarios));
     });
 
-    ["weeklyHours", "hoursPerDay", "currency", "discoveryWeeks", "sitWeeks", "uatWeeks", "goliveWeeks"].forEach((id) => {
+    ["weeklyHours", "hoursPerDay", "currency", "discoveryWeeks", "sitWeeks", "uatWeeks", "goliveWeeks", "maxBudget", "maxProjectWeeks", "maxScenarios"].forEach((id) => {
       el(id).addEventListener("input", runScenarios);
     });
+
+    el("noIdleTime").addEventListener("change", runScenarios);
 
     ["workCsv", "rolesCsv", "meetingsCsv"].forEach((id) => {
       el(id).addEventListener("input", runScenarios);
