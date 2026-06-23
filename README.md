@@ -74,7 +74,7 @@ meeting,phase,frequency,duration_hours,attendees
 
 ## Scenario limits and selection
 
-- **Max budget** and **Max project weeks** filter out scenarios above those limits. Use `0` for no limit.
+- **Max budget** and **Max project weeks** filter out scenarios above those limits. Leave either field blank for no limit; `0` is treated as a real zero limit.
 - **Do not allow idle time** excludes scenarios below 68% build utilization, matching the app's idle-time warning threshold.
 - **Max output scenarios** limits the displayed table and exported CSV.
 - Scenarios with missing skills or unresolved dependencies are excluded when feasible alternatives exist.
