@@ -422,11 +422,11 @@
             </div>
             <div class="field">
               <label for="maxBudget">Max budget</label>
-              <input id="maxBudget" type="number" min="0" value="" step="10000" placeholder="No limit" title="Leave blank for no budget limit">
+              <input id="maxBudget" type="text" inputmode="decimal" value="" placeholder="No limit" title="Leave blank for no budget limit">
             </div>
             <div class="field">
               <label for="maxProjectWeeks">Max project weeks</label>
-              <input id="maxProjectWeeks" type="number" min="0" value="" step="0.5" placeholder="No limit" title="Leave blank for no duration limit">
+              <input id="maxProjectWeeks" type="text" inputmode="decimal" value="" placeholder="No limit" title="Leave blank for no duration limit">
             </div>
             <div class="field">
               <label for="maxScenarios">Max output scenarios</label>
@@ -607,6 +607,14 @@ Go-live checkpoint,go-live,daily,0.75,All`;
       const normalized = String(value ?? "").replace(/[^0-9.-]/g, "");
       const parsed = Number(normalized);
       return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function normalizeBudgetInput() {
+      const input = el("maxBudget");
+      const cleaned = input.value.replace(/[^0-9,.]/g, "");
+      const [integerPart, ...decimalParts] = cleaned.split(".");
+      const decimals = decimalParts.join("").slice(0, 2);
+      input.value = integerPart + (decimalParts.length ? `.${decimals}` : "");
     }
 
     function normalizePhase(phase) {
@@ -1093,8 +1101,13 @@ Go-live checkpoint,go-live,daily,0.75,All`;
       download("project-scenarios.csv", toCsv(state.scenarios));
     });
 
-    ["weeklyHours", "hoursPerDay", "currency", "discoveryWeeks", "sitWeeks", "uatWeeks", "goliveWeeks", "maxBudget", "maxProjectWeeks", "maxScenarios"].forEach((id) => {
+    ["weeklyHours", "hoursPerDay", "currency", "discoveryWeeks", "sitWeeks", "uatWeeks", "goliveWeeks", "maxProjectWeeks", "maxScenarios"].forEach((id) => {
       el(id).addEventListener("input", runScenarios);
+    });
+
+    el("maxBudget").addEventListener("input", () => {
+      normalizeBudgetInput();
+      runScenarios();
     });
 
     el("noIdleTime").addEventListener("change", runScenarios);
