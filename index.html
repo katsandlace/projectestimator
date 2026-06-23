@@ -422,11 +422,11 @@
             </div>
             <div class="field">
               <label for="maxBudget">Max budget</label>
-              <input id="maxBudget" type="number" min="0" value="0" step="10000" title="Use 0 for no budget limit">
+              <input id="maxBudget" type="number" min="0" value="" step="10000" placeholder="No limit" title="Leave blank for no budget limit">
             </div>
             <div class="field">
               <label for="maxProjectWeeks">Max project weeks</label>
-              <input id="maxProjectWeeks" type="number" min="0" value="0" step="0.5" title="Use 0 for no duration limit">
+              <input id="maxProjectWeeks" type="number" min="0" value="" step="0.5" placeholder="No limit" title="Leave blank for no duration limit">
             </div>
             <div class="field">
               <label for="maxScenarios">Max output scenarios</label>
@@ -963,13 +963,13 @@ Go-live checkpoint,go-live,daily,0.75,All`;
         });
       });
 
-      const maxBudget = parseNumber(el("maxBudget").value, 0);
-      const maxProjectWeeks = parseNumber(el("maxProjectWeeks").value, 0);
+      const maxBudget = el("maxBudget").value.trim() === "" ? null : parseNumber(el("maxBudget").value, 0);
+      const maxProjectWeeks = el("maxProjectWeeks").value.trim() === "" ? null : parseNumber(el("maxProjectWeeks").value, 0);
       const maxScenarios = Math.max(1, Math.min(500, Math.floor(parseNumber(el("maxScenarios").value, 20))));
       const noIdleTime = el("noIdleTime").checked;
       const withinLimits = generated.filter((scenario) =>
-        (!maxBudget || scenario.totalCost <= maxBudget) &&
-        (!maxProjectWeeks || scenario.totalWeeks <= maxProjectWeeks) &&
+        (maxBudget === null || scenario.totalCost <= maxBudget) &&
+        (maxProjectWeeks === null || scenario.totalWeeks <= maxProjectWeeks) &&
         (!noIdleTime || scenario.utilization >= 0.68)
       );
       const feasible = withinLimits.filter((scenario) => !scenario.unscheduled.length);
@@ -1028,7 +1028,7 @@ Go-live checkpoint,go-live,daily,0.75,All`;
 
       if (!scenarios.length) {
         el("scenarioBody").innerHTML = "";
-        el("timeline").innerHTML = `<div class="empty">Load CSV data and run scenarios.</div>`;
+        el("timeline").innerHTML = `<div class="empty">Adjust the constraints to see matching scenarios.</div>`;
         return;
       }
 
