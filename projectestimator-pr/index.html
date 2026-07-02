@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project Configuration Planner</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Project Configuration Planner</h1>
+        <p>Load delivery work, role types, skills, and standing meetings, then compare valid staffing mixes by duration, wrap-around, burn, and total cost.</p>
+      </div>
+      <div class="actions">
+        <button id="loadSamples">Load sample data</button>
+        <button id="exportCsv">Export scenarios</button>
+        <button id="run" class="primary">Run scenarios</button>
+      </div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>Inputs</h2>
+        </div>
+        <div class="panel-body stack">
+          <div class="grid">
+            <div class="field">
+              <label for="weeklyHours">Working hours/week</label>
+              <input id="weeklyHours" type="number" min="10" max="80" value="37.5" step="0.5">
+            </div>
+            <div class="field">
+              <label for="hoursPerDay">Hours/day for estimates</label>
+              <input id="hoursPerDay" type="number" min="1" max="12" value="7.5" step="0.5">
+            </div>
+            <div class="field">
+              <label for="currency">Currency symbol</label>
+              <input id="currency" type="text" value="£" maxlength="3">
+            </div>
+            <div class="field">
+              <label for="discoveryWeeks">Discovery weeks</label>
+              <input id="discoveryWeeks" type="number" min="0" value="3" step="0.5">
+            </div>
+            <div class="field">
+              <label for="sitWeeks">SIT weeks</label>
+              <input id="sitWeeks" type="number" min="0" value="3" step="0.5">
+            </div>
+            <div class="field">
+              <label for="uatWeeks">UAT weeks</label>
+              <input id="uatWeeks" type="number" min="0" value="3" step="0.5">
+            </div>
+            <div class="field">
+              <label for="goliveWeeks">Go-live weeks</label>
+              <input id="goliveWeeks" type="number" min="0" value="1" step="0.5">
+            </div>
+            <div class="field">
+              <label for="maxBudget">Max budget</label>
+              <input id="maxBudget" type="text" inputmode="decimal" value="" placeholder="No limit" title="Leave blank for no budget limit">
+            </div>
+            <div class="field">
+              <label for="maxProjectWeeks">Max project weeks</label>
+              <input id="maxProjectWeeks" type="text" inputmode="decimal" value="" placeholder="No limit" title="Leave blank for no duration limit">
+            </div>
+            <div class="field">
+              <label for="preferredTeamSize">Preferred team size</label>
+              <input id="preferredTeamSize" type="text" inputmode="numeric" value="" placeholder="No preference" title="Favours scenarios at or near this team size without excluding others">
+            </div>
+            <div class="field">
+              <label for="maxTeamSize">Max team size</label>
+              <input id="maxTeamSize" type="text" inputmode="numeric" value="" placeholder="No limit" title="Excludes scenarios larger than this team size">
+            </div>
+            <div class="field">
+              <label for="maxScenarios">Max output scenarios</label>
+              <input id="maxScenarios" type="number" min="1" max="500" value="20" step="1">
+            </div>
+            <div class="check-field">
+              <input id="noIdleTime" type="checkbox">
+              <label for="noIdleTime" title="Excludes scenarios with less than 68% build utilization">Do not allow idle time</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="workFile">Technical work CSV</label>
+            <input id="workFile" type="file" accept=".csv,text/csv">
+          </div>
+          <div class="field">
+            <label for="rolesFile">Roles and skills CSV</label>
+            <input id="rolesFile" type="file" accept=".csv,text/csv">
+          </div>
+          <div class="field">
+            <label for="meetingsFile">Standing meetings CSV</label>
+            <input id="meetingsFile" type="file" accept=".csv,text/csv">
+          </div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="results" type="button">Results</button>
+          <button class="tab" data-tab="work" type="button">Work CSV</button>
+          <button class="tab" data-tab="roles" type="button">Roles CSV</button>
+          <button class="tab" data-tab="meetings" type="button">Meetings CSV</button>
+        </div>
+
+        <div id="results" class="tab-pane active">
+          <div class="panel-body">
+            <div class="status" id="metrics"></div>
+          </div>
+          <div class="scenario-summary small" id="scenarioSummary"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th class="num">Team size</th>
+                  <th>Staffing mix</th>
+                  <th class="num">Build weeks</th>
+                  <th class="num">Total project weeks</th>
+                  <th class="num">Weekly burn</th>
+                  <th class="num">Total cost</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="scenarioBody"></tbody>
+            </table>
+          </div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+
+        <div id="work" class="tab-pane">
+          <div class="panel-body field">
+            <label for="workCsv">Technical work: id,name,estimate_days,skills,dependencies</label>
+            <textarea id="workCsv"></textarea>
+          </div>
+        </div>
+
+        <div id="roles" class="tab-pane">
+          <div class="panel-body field">
+            <label for="rolesCsv">Roles: role,role_family,staffing,count,min_count,max_count,daily_rate,build_contribution_pct,skills,inherits</label>
+            <textarea id="rolesCsv"></textarea>
+          </div>
+        </div>
+
+        <div id="meetings" class="tab-pane">
+          <div class="panel-body field">
+            <label for="meetingsCsv">Standing meetings: meeting,phase,frequency,duration_hours,attendees</label>
+            <textarea id="meetingsCsv"></textarea>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
