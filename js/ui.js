@@ -324,8 +324,55 @@ function renderStories(scenario) {
   `;
 }
 
+function renderMeetings(scenario, context) {
+  const meetingCosts = scenario.meetingCosts;
+  el("meetingsDetail").innerHTML = `
+    <div class="detail-section-head">
+      <div>
+        <h3>Standing meeting cost by phase</h3>
+        <p>This is the share of existing role cost spent in standing meetings; it is not added again to total project cost.</p>
+      </div>
+    </div>
+    <div class="detail-table-wrap meeting-cost-table">
+      <table class="detail-table">
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th class="num">Duration weeks</th>
+            <th class="num">Meeting person-hours</th>
+            <th class="num">Meeting cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${meetingCosts.phases.map((phase) => `
+            <tr>
+              <td><strong>${escapeHtml(phase.label)}</strong></td>
+              <td class="num">${formatNumber(phase.weeks)}</td>
+              <td class="num">${formatNumber(phase.personHours)}</td>
+              <td class="num">${formatMoney(phase.cost, context.currency)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th>Total</th>
+            <th></th>
+            <th class="num">${formatNumber(meetingCosts.personHours)}</th>
+            <th class="num">${formatMoney(meetingCosts.cost, context.currency)}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+}
+
 function renderTeam(scenario, context) {
   el("teamDetail").innerHTML = `
+    <div class="detail-section-head team-section-head">
+      <div>
+        <h3>Team allocation</h3>
+      </div>
+    </div>
     <div class="detail-table-wrap">
       <table class="detail-table">
         <thead>
@@ -335,8 +382,9 @@ function renderTeam(scenario, context) {
             <th>Skills covered</th>
             <th class="num">Stories</th>
             <th class="num">Productive days</th>
-            <th class="num">Utilisation</th>
-            <th class="num">Unused days</th>
+            <th class="num">Build allocation</th>
+            <th class="num">Build utilisation</th>
+            <th class="num">Unused build days</th>
             <th class="num">Weekly cost</th>
           </tr>
         </thead>
@@ -348,6 +396,7 @@ function renderTeam(scenario, context) {
               <td>${escapeHtml(role.skills.length ? displaySkills(role.skills) : "None")}</td>
               <td class="num">${role.assignedStories}</td>
               <td class="num">${formatNumber(role.productiveDays)}</td>
+              <td class="num">${formatNumber(role.buildContributionPct, 0)}%</td>
               <td class="num">${role.utilization === null ? "n/a" : formatPercent(role.utilization)}</td>
               <td class="num">${role.utilization === null ? "n/a" : formatNumber(role.idleDays)}</td>
               <td class="num">${formatMoney(role.weeklyCost, context.currency)}</td>
@@ -381,6 +430,7 @@ function openScenarioDetail(index, focusDiagnostic = "") {
   renderTimeline(scenario, detailContext);
   renderStories(scenario);
   renderTeam(scenario, detailContext);
+  renderMeetings(scenario, detailContext);
   el("scenarioDetail").hidden = false;
   switchDetailTab(focusDiagnostic ? "diagnostics" : "timelineDetail");
   el("scenarioDetail").scrollIntoView?.({ behavior: "smooth", block: "start" });
