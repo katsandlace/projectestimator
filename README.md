@@ -4,9 +4,25 @@ Sample data is not a reflection of anything other than the need for interesting 
 
 # Project Configuration Planner
 
-Open `index.html` directly, or use the local URL below while the included test server is running:
+The app uses native JavaScript modules, so run it through a local web server rather than opening `index.html` directly:
 
-`http://127.0.0.1:8765/`
+```sh
+python3 -m http.server 8765
+```
+
+Then open `http://127.0.0.1:8765/`.
+
+## Source structure
+
+- `index.html` contains the page structure.
+- `styles.css` contains the responsive layout and visual styling.
+- `js/csv.js` parses the three CSV formats and resolves inherited skills.
+- `js/scheduler.js` schedules build work against skills, dependencies, and meeting capacity.
+- `js/scenarios.js` generates staffing combinations and selects optimal scenarios.
+- `js/ui.js` renders results and exports scenario CSVs.
+- `js/utils.js` contains shared value parsing and list helpers.
+- `js/app.js` connects the controls, data, calculation modules, and UI.
+- `package.json` declares the dependency-free browser source as ES modules for local checks.
 
 ## Technical work CSV
 
