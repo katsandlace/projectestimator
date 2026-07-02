@@ -31,6 +31,7 @@ role,role_family,staffing,count,min_count,max_count,daily_rate,build_contributio
 - Add every fixed or variable role type that might be used on the project.
 - Set `staffing` to `fixed` and provide `count` for roles such as Project Manager and Technical Lead.
 - Set `staffing` to `variable` and provide `min_count` and `max_count` for roles the planner should vary.
+- `min_count` is a hard minimum for that exact role; inherited skills do not reduce it. Use `0` when the role is optional because another role can cover its work.
 - Use `role_family` to group roles, for example `developer`, `consultant`, or `leadership`. Meeting attendees can name a family.
 - Separate multiple `skills` with semicolons.
 - Set `inherits` to another role name when a specialist also has that role's skills. An Integration Developer can inherit General Developer, for example.
@@ -75,6 +76,8 @@ meeting,phase,frequency,duration_hours,attendees
 ## Scenario limits and selection
 
 - **Max budget** and **Max project weeks** filter out scenarios above those limits. Leave either field blank for no limit; `0` is treated as a real zero limit.
+- **Preferred team size** is a soft preference. When the output count is limited, the planner includes the best feasible scenario at or nearest that size, then fills the remaining places from the cost-versus-duration Pareto fronts. Leave it blank for no preference.
+- **Max team size** is a hard limit. Scenarios above it are excluded. If the fixed and minimum role counts already exceed the limit, the planner reports the smallest team those role settings can generate.
 - **Do not allow idle time** excludes scenarios below 68% build utilization, matching the app's idle-time warning threshold.
 - **Max output scenarios** limits the displayed table and exported CSV.
 - Scenarios with missing skills or unresolved dependencies are excluded when feasible alternatives exist.
