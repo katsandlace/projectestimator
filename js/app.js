@@ -1,5 +1,5 @@
 import { parseMeetingsCsv, parseRolesCsv, parseWorkCsv } from "./csv.js";
-import { criticalPathWeeks } from "./scheduler.js";
+import { dependencyCriticalPath } from "./scheduler.js";
 import { generateScenarios, scenarioLabel, selectOptimalScenarios } from "./scenarios.js";
 import { downloadCsv, renderResults, scenariosToCsv } from "./ui.js";
 import { parseNumber } from "./utils.js";
@@ -65,15 +65,19 @@ function loadInputs() {
 
 function runScenarios() {
   const { tasks, roles, meetings } = loadInputs();
-  const fixedWeeks = parseNumber(el("discoveryWeeks").value) +
-    parseNumber(el("sitWeeks").value) +
-    parseNumber(el("uatWeeks").value) +
-    parseNumber(el("goliveWeeks").value);
-  const criticalWeeks = criticalPathWeeks(tasks);
+  const phaseWeeks = {
+    discovery: parseNumber(el("discoveryWeeks").value),
+    sit: parseNumber(el("sitWeeks").value),
+    uat: parseNumber(el("uatWeeks").value),
+    goLive: parseNumber(el("goliveWeeks").value)
+  };
+  const fixedWeeks = Object.values(phaseWeeks).reduce((total, weeks) => total + weeks, 0);
+  const criticalPath = dependencyCriticalPath(tasks);
+  const hoursPerDay = Math.max(0.1, parseNumber(el("hoursPerDay").value, 7.5));
   const generated = generateScenarios(tasks, roles, meetings, {
     fixedWeeks,
     weeklyHours: parseNumber(el("weeklyHours").value, 37.5),
-    hoursPerDay: parseNumber(el("hoursPerDay").value, 7.5)
+    hoursPerDay
   });
 
   const maxBudget = el("maxBudget").value.trim() === "" ? null : parseNumber(el("maxBudget").value, 0);
@@ -94,6 +98,7 @@ function runScenarios() {
   );
   const feasible = withinLimits.filter((scenario) => !scenario.unscheduled.length);
   let scenarios = selectOptimalScenarios(feasible, maxScenarios, preferredTeamSize);
+  let diagnosticMode = false;
 
   if (scenarios.length) {
     const preferenceMessage = preferredTeamSize === null
@@ -101,6 +106,7 @@ function runScenarios() {
       : ` Preferred team size ${preferredTeamSize} influenced selection.`;
     state.selectionMessage = `${scenarios.length} optimal scenario${scenarios.length === 1 ? "" : "s"} shown from ${generated.length} generated; ${feasible.length} met all constraints.${preferenceMessage}`;
   } else {
+    diagnosticMode = true;
     scenarios = withinLimits
       .filter((scenario) => scenario.unscheduled.length)
       .sort((a, b) => a.unscheduled.length - b.unscheduled.length || a.totalCost - b.totalCost)
@@ -116,8 +122,41 @@ function runScenarios() {
   }
 
   scenarios.sort((a, b) => a.teamSize - b.teamSize || a.totalCost - b.totalCost || a.totalWeeks - b.totalWeeks);
+  const lowestCost = diagnosticMode
+    ? null
+    : feasible.reduce((best, candidate) => !best || candidate.totalCost < best.totalCost ? candidate : best, null);
+  const fastest = diagnosticMode
+    ? null
+    : feasible.reduce((best, candidate) => !best || candidate.totalWeeks < best.totalWeeks ? candidate : best, null);
+  const preferredDistance = diagnosticMode || preferredTeamSize === null
+    ? null
+    : Math.min(...feasible.map((candidate) => Math.abs(candidate.teamSize - preferredTeamSize)));
   scenarios.forEach((scenario, index) => {
     scenario.label = scenarioLabel(index);
+    const reasons = [];
+    if (diagnosticMode) {
+      reasons.push("Closest staffing mix available for diagnosing infeasible work");
+    } else {
+      if (scenario === lowestCost) reasons.push("Lowest-cost feasible option");
+      if (scenario === fastest) reasons.push("Fastest feasible option");
+      if (preferredDistance !== null && Math.abs(scenario.teamSize - preferredTeamSize) === preferredDistance) {
+        reasons.push(`Closest available team size to the preference of ${preferredTeamSize}`);
+      }
+      if (!reasons.length) reasons.push("Cost and duration trade-off retained from the scenario frontier");
+    }
+    scenario.selectionReasons = reasons;
+  });
+  scenarios.forEach((scenario, index) => {
+    const previous = scenarios[index - 1];
+    scenario.previousComparison = previous && scenario.teamSize > previous.teamSize
+      ? {
+          label: previous.label,
+          teamSize: previous.teamSize,
+          totalCost: previous.totalCost,
+          totalWeeks: previous.totalWeeks,
+          buildWeeks: previous.buildWeeks
+        }
+      : null;
   });
 
   state.scenarios = scenarios;
@@ -125,7 +164,9 @@ function runScenarios() {
     scenarios,
     tasks,
     selectionMessage: state.selectionMessage,
-    criticalWeeks,
+    criticalPath,
+    phaseWeeks,
+    hoursPerDay,
     currency: el("currency").value || "£"
   });
 }

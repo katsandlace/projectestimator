@@ -40,6 +40,7 @@ function makeResources(roles, meetings, weeklyHours) {
         id: `${role.role}-${i + 1}`,
         name: role.role,
         skills: role.skills,
+        ownSkills: role.ownSkills,
         dailyHours: Math.max(0.1, weeklyAvailable / 5),
         nextFree: 0,
         worked: 0,
@@ -73,11 +74,20 @@ function taskPriority(tasks) {
 
 export function scheduleBuild(tasks, roles, meetings, { weeklyHours = 37.5, hoursPerDay = 7.5 } = {}) {
   if (!tasks.length) {
-    return { buildWeeks: 0, utilization: 0, resources: [], completed: new Map(), unscheduled: [] };
+    return {
+      buildWeeks: 0,
+      buildDays: 0,
+      utilization: 0,
+      resources: [],
+      assignments: [],
+      completed: new Map(),
+      unscheduled: []
+    };
   }
 
   const resources = makeResources(roles, meetings, weeklyHours);
   const unscheduled = [...tasks];
+  const assignments = [];
   const completed = new Map();
   const priorities = taskPriority(tasks);
   let guard = 0;
@@ -98,7 +108,7 @@ export function scheduleBuild(tasks, roles, meetings, { weeklyHours = 37.5, hour
       resources.filter((resource) => canDo(resource, task)).forEach((resource) => {
         const start = Math.max(resource.nextFree, dependencyDone);
         if (!best || start < best.start || (start === best.start && resource.dailyHours > best.resource.dailyHours)) {
-          best = { task, resource, start };
+          best = { task, resource, start, dependencyDone };
         }
       });
     });
@@ -109,6 +119,21 @@ export function scheduleBuild(tasks, roles, meetings, { weeklyHours = 37.5, hour
     const finish = best.start + durationDays;
     best.resource.nextFree = finish;
     best.resource.worked += effortHours;
+    assignments.push({
+      taskId: best.task.id,
+      taskName: best.task.name,
+      resourceId: best.resource.id,
+      role: best.resource.name,
+      startDay: best.start,
+      finishDay: finish,
+      durationDays,
+      effortDays: best.task.estimateDays,
+      dependencyReadyDay: best.dependencyDone,
+      queueWaitDays: Math.max(0, best.start - best.dependencyDone),
+      skills: best.task.skills,
+      dependencies: best.task.dependencies,
+      inheritedSkillsUsed: best.task.skills.filter((skill) => !best.resource.ownSkills.includes(skill))
+    });
     completed.set(best.task.id.toLowerCase(), finish);
     unscheduled.splice(unscheduled.indexOf(best.task), 1);
   }
@@ -118,31 +143,42 @@ export function scheduleBuild(tasks, roles, meetings, { weeklyHours = 37.5, hour
   const workedHours = resources.reduce((total, resource) => total + resource.worked, 0);
   return {
     buildWeeks: buildDays / 5,
+    buildDays,
     utilization: totalCapacityHours ? workedHours / totalCapacityHours : 0,
     resources,
+    assignments,
     completed,
     unscheduled
   };
 }
 
-export function criticalPathWeeks(tasks) {
-  if (!tasks.length) return 0;
+export function dependencyCriticalPath(tasks) {
+  if (!tasks.length) return { days: 0, weeks: 0, taskIds: [] };
   const byId = new Map(tasks.map((task) => [task.id.toLowerCase(), task]));
   const memo = new Map();
 
   function walk(task) {
     const key = task.id.toLowerCase();
     if (memo.has(key)) return memo.get(key);
-    const dependencyMax = task.dependencies
+    const longestDependency = task.dependencies
       .map((dependency) => byId.get(dependency))
       .filter(Boolean)
-      .reduce((max, dependencyTask) => Math.max(max, walk(dependencyTask)), 0);
-    const total = dependencyMax + task.estimateDays;
-    memo.set(key, total);
-    return total;
+      .map(walk)
+      .reduce((longest, candidate) => candidate.days > longest.days ? candidate : longest, { days: 0, taskIds: [] });
+    const result = {
+      days: longestDependency.days + task.estimateDays,
+      taskIds: [...longestDependency.taskIds, task.id]
+    };
+    memo.set(key, result);
+    return result;
   }
 
-  return Math.max(...tasks.map(walk)) / 5;
+  const longest = tasks.map(walk).reduce((best, candidate) => candidate.days > best.days ? candidate : best);
+  return { ...longest, weeks: longest.days / 5 };
+}
+
+export function criticalPathWeeks(tasks) {
+  return dependencyCriticalPath(tasks).weeks;
 }
 
 export function topSkillPressure(tasks) {

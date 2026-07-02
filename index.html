@@ -127,6 +127,26 @@
             </table>
           </div>
           <div class="timeline" id="timeline"></div>
+          <section class="scenario-detail" id="scenarioDetail" hidden aria-live="polite">
+            <div class="detail-head">
+              <div>
+                <p class="detail-kicker">Scenario detail</p>
+                <h2 id="detailTitle"></h2>
+                <p id="detailSummary"></p>
+              </div>
+              <button id="closeDetail" type="button">Close</button>
+            </div>
+            <div class="detail-tabs" role="tablist" aria-label="Scenario detail views">
+              <button class="detail-tab active" type="button" data-detail-tab="diagnostics" aria-selected="true">Diagnostics</button>
+              <button class="detail-tab" type="button" data-detail-tab="timelineDetail" aria-selected="false">Timeline</button>
+              <button class="detail-tab" type="button" data-detail-tab="storiesDetail" aria-selected="false">Stories</button>
+              <button class="detail-tab" type="button" data-detail-tab="teamDetail" aria-selected="false">Team</button>
+            </div>
+            <div class="detail-pane active" id="diagnostics"></div>
+            <div class="detail-pane" id="timelineDetail"></div>
+            <div class="detail-pane" id="storiesDetail"></div>
+            <div class="detail-pane" id="teamDetail"></div>
+          </section>
         </div>
 
         <div id="work" class="tab-pane">

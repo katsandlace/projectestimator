@@ -89,6 +89,15 @@ meeting,phase,frequency,duration_hours,attendees
 - Total cost is weekly burn multiplied by total project weeks.
 - The result is a planning comparison, not a day-level delivery commitment.
 
+## Scenario detail
+
+- Select a scenario row or its letter to open Diagnostics, Timeline, Stories, and Team views.
+- Select a warning flag to open the diagnostic evidence behind that warning.
+- Diagnostics show resource utilisation, unused capacity, skill concentration, queue delays, dependency paths, and comparison with the preceding smaller scenario where relevant.
+- The selection summary identifies lowest-cost, fastest, preferred-size, and retained cost/duration trade-off scenarios.
+- The timeline uses anonymous role instances such as `Developer-1` and build week numbers. It does not assign named individuals or calendar dates.
+- Story assignments remain whole: one story is assigned to one resource at a time.
+
 ## Scenario limits and selection
 
 - **Max budget** and **Max project weeks** filter out scenarios above those limits. Leave either field blank for no limit; `0` is treated as a real zero limit.

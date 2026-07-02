@@ -51,6 +51,53 @@ export function generateScenarios(tasks, roles, meetings, { fixedWeeks, weeklyHo
     const missingSkills = [...new Set(scheduled.unscheduled
       .filter((task) => !scheduled.resources.some((resource) => canDo(resource, task)))
       .flatMap((task) => task.skills))];
+    const resourceDetails = scheduled.resources.map((resource) => {
+      const capacityHours = resource.dailyHours * scheduled.buildDays;
+      const assignments = scheduled.assignments.filter((assignment) => assignment.resourceId === resource.id);
+      return {
+        id: resource.id,
+        role: resource.name,
+        skills: resource.skills,
+        dailyHours: resource.dailyHours,
+        workedHours: resource.worked,
+        capacityHours,
+        utilization: capacityHours ? resource.worked / capacityHours : 0,
+        idleDays: resource.dailyHours ? Math.max(0, capacityHours - resource.worked) / resource.dailyHours : 0,
+        assignmentCount: assignments.length
+      };
+    });
+    const team = scenarioRoles.filter((role) => role.count > 0).map((role) => {
+      const roleResources = resourceDetails.filter((resource) => resource.role === role.role);
+      const roleAssignments = scheduled.assignments.filter((assignment) => assignment.role === role.role);
+      const workedHours = roleResources.reduce((total, resource) => total + resource.workedHours, 0);
+      const capacityHours = roleResources.reduce((total, resource) => total + resource.capacityHours, 0);
+      return {
+        role: role.role,
+        count: role.count,
+        skills: role.skills,
+        buildContributionPct: role.buildContributionPct,
+        assignedStories: roleAssignments.length,
+        productiveDays: workedHours / hoursPerDay,
+        utilization: capacityHours ? workedHours / capacityHours : null,
+        idleDays: roleResources.reduce((total, resource) => total + resource.idleDays, 0),
+        weeklyCost: role.count * role.weeklyCost
+      };
+    });
+    const skillDiagnostic = topSkill ? (() => {
+      const matchingAssignments = scheduled.assignments.filter((assignment) => assignment.skills.includes(topSkill.skill));
+      const eligibleResources = resourceDetails.filter((resource) => resource.skills.includes(topSkill.skill));
+      return {
+        skill: topSkill.skill,
+        share: topSkill.share,
+        demandDays: tasks
+          .filter((task) => task.skills.includes(topSkill.skill))
+          .reduce((total, task) => total + task.estimateDays, 0),
+        eligiblePeople: eligibleResources.length,
+        capacityDays: eligibleResources.reduce((total, resource) => total + resource.capacityHours / hoursPerDay, 0),
+        queueWaitDays: matchingAssignments.reduce((total, assignment) => total + assignment.queueWaitDays, 0),
+        storyCount: matchingAssignments.length
+      };
+    })() : null;
 
     return {
       label: scenarioLabel(index),
@@ -61,9 +108,13 @@ export function generateScenarios(tasks, roles, meetings, { fixedWeeks, weeklyHo
       weeklyBurn,
       totalCost: weeklyBurn * totalWeeks,
       utilization: scheduled.utilization,
+      assignments: scheduled.assignments,
+      resources: resourceDetails,
+      team,
       unscheduled: scheduled.unscheduled,
       missingSkills,
-      topSkill
+      topSkill,
+      skillDiagnostic
     };
   });
 }
