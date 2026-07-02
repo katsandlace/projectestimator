@@ -429,6 +429,14 @@
               <input id="maxProjectWeeks" type="text" inputmode="decimal" value="" placeholder="No limit" title="Leave blank for no duration limit">
             </div>
             <div class="field">
+              <label for="preferredTeamSize">Preferred team size</label>
+              <input id="preferredTeamSize" type="text" inputmode="numeric" value="" placeholder="No preference" title="Favours scenarios at or near this team size without excluding others">
+            </div>
+            <div class="field">
+              <label for="maxTeamSize">Max team size</label>
+              <input id="maxTeamSize" type="text" inputmode="numeric" value="" placeholder="No limit" title="Excludes scenarios larger than this team size">
+            </div>
+            <div class="field">
               <label for="maxScenarios">Max output scenarios</label>
               <input id="maxScenarios" type="number" min="1" max="500" value="20" step="1">
             </div>
@@ -931,12 +939,18 @@ Go-live checkpoint,go-live,daily,0.75,All`;
       return scored.sort((a, b) => b.distance - a.distance).slice(0, count).map((entry) => entry.item);
     }
 
-    function selectOptimalScenarios(scenarios, maxCount) {
+    function selectOptimalScenarios(scenarios, maxCount, preferredTeamSize = null) {
       const selected = [];
+      if (preferredTeamSize !== null && scenarios.length) {
+        const closestDistance = Math.min(...scenarios.map((scenario) => Math.abs(scenario.teamSize - preferredTeamSize)));
+        const closest = scenarios.filter((scenario) => Math.abs(scenario.teamSize - preferredTeamSize) === closestDistance);
+        selected.push(...diverseSelection(closest, 1));
+      }
       for (const front of paretoFronts(scenarios)) {
         const remaining = maxCount - selected.length;
         if (remaining <= 0) break;
-        selected.push(...diverseSelection(front, remaining));
+        const unselected = front.filter((scenario) => !selected.includes(scenario));
+        selected.push(...diverseSelection(unselected, remaining));
       }
       return selected;
     }
@@ -973,26 +987,35 @@ Go-live checkpoint,go-live,daily,0.75,All`;
 
       const maxBudget = el("maxBudget").value.trim() === "" ? null : parseNumber(el("maxBudget").value, 0);
       const maxProjectWeeks = el("maxProjectWeeks").value.trim() === "" ? null : parseNumber(el("maxProjectWeeks").value, 0);
+      const preferredTeamSize = el("preferredTeamSize").value.trim() === "" ? null : Math.max(0, Math.floor(parseNumber(el("preferredTeamSize").value, 0)));
+      const maxTeamSize = el("maxTeamSize").value.trim() === "" ? null : Math.max(0, Math.floor(parseNumber(el("maxTeamSize").value, 0)));
       const maxScenarios = Math.max(1, Math.min(500, Math.floor(parseNumber(el("maxScenarios").value, 20))));
       const noIdleTime = el("noIdleTime").checked;
       const withinLimits = generated.filter((scenario) =>
         (maxBudget === null || scenario.totalCost <= maxBudget) &&
         (maxProjectWeeks === null || scenario.totalWeeks <= maxProjectWeeks) &&
+        (maxTeamSize === null || scenario.teamSize <= maxTeamSize) &&
         (!noIdleTime || scenario.utilization >= 0.68)
       );
       const feasible = withinLimits.filter((scenario) => !scenario.unscheduled.length);
-      let scenarios = selectOptimalScenarios(feasible, maxScenarios);
+      let scenarios = selectOptimalScenarios(feasible, maxScenarios, preferredTeamSize);
 
       if (scenarios.length) {
-        state.selectionMessage = `${scenarios.length} optimal scenario${scenarios.length === 1 ? "" : "s"} shown from ${generated.length} generated; ${feasible.length} met all constraints.`;
+        const preferenceMessage = preferredTeamSize === null ? "" : ` Preferred team size ${preferredTeamSize} influenced selection.`;
+        state.selectionMessage = `${scenarios.length} optimal scenario${scenarios.length === 1 ? "" : "s"} shown from ${generated.length} generated; ${feasible.length} met all constraints.${preferenceMessage}`;
       } else {
         scenarios = withinLimits
           .filter((scenario) => scenario.unscheduled.length)
           .sort((a, b) => a.unscheduled.length - b.unscheduled.length || a.totalCost - b.totalCost)
           .slice(0, maxScenarios);
-        state.selectionMessage = scenarios.length
-          ? `No feasible scenarios met all constraints. Showing ${scenarios.length} closest staffing mixes for diagnosis.`
-          : `No scenarios met the current budget, duration, and idle-time constraints.`;
+        const smallestTeamSize = generated.length ? Math.min(...generated.map((scenario) => scenario.teamSize)) : null;
+        if (scenarios.length) {
+          state.selectionMessage = `No feasible scenarios met all constraints. Showing ${scenarios.length} closest staffing mixes for diagnosis.`;
+        } else if (maxTeamSize !== null && smallestTeamSize !== null && smallestTeamSize > maxTeamSize) {
+          state.selectionMessage = `No scenarios meet max team size ${maxTeamSize}. The smallest team generated from the fixed and minimum role counts is ${smallestTeamSize}.`;
+        } else {
+          state.selectionMessage = `No scenarios met the current budget, duration, team-size, and idle-time constraints.`;
+        }
       }
 
       scenarios.sort((a, b) => a.teamSize - b.teamSize || a.totalCost - b.totalCost || a.totalWeeks - b.totalWeeks);
@@ -1071,7 +1094,11 @@ Go-live checkpoint,go-live,daily,0.75,All`;
     }
 
     function readFileInto(inputId, textareaId) {
-      el(inputId).addEventListener("change", async (event) => {
+      const input = el(inputId);
+      input.addEventListener("click", () => {
+        input.value = "";
+      });
+      input.addEventListener("change", async (event) => {
         const file = event.target.files[0];
         if (!file) return;
         el(textareaId).value = await file.text();
@@ -1101,7 +1128,7 @@ Go-live checkpoint,go-live,daily,0.75,All`;
       download("project-scenarios.csv", toCsv(state.scenarios));
     });
 
-    ["weeklyHours", "hoursPerDay", "currency", "discoveryWeeks", "sitWeeks", "uatWeeks", "goliveWeeks", "maxProjectWeeks", "maxScenarios"].forEach((id) => {
+    ["weeklyHours", "hoursPerDay", "currency", "discoveryWeeks", "sitWeeks", "uatWeeks", "goliveWeeks", "maxProjectWeeks", "preferredTeamSize", "maxTeamSize", "maxScenarios"].forEach((id) => {
       el(id).addEventListener("input", runScenarios);
     });
 
